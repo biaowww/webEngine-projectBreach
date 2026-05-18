@@ -1,0 +1,152 @@
+====== Sheet 1: 棋子基础属性 ======
+,,,,,,,,,,,,,,
+ID,名称,阵营,伤害类型,角色定位,HP,ATK,攻速(s),理论DPS,射程(格),移速(s/格),蓝上限,每攻回蓝,治疗量,治疗间隔(s)
+hero_blue,布鲁 Blue,player,AP,tank/hero,1520,24,1.60,15.0,2,0.65,90,22,—,—
+hero_sydney,西德尼 Sydney,player,AD,ftr/hero,750,70,1.00,70.0,1,0.50,80,26,—,—
+adc_a,神射甲,player,AD,adc,650,60,0.78,76.9,4,0.55,—,—,—,—
+adc_b,神射乙,player,AD,adc,650,60,0.78,76.9,4,0.55,—,—,—,—
+tank_support,护盾卫,player,AD,def,1500,30,1.50,20.0,1,0.72,—,—,—,—
+healer_support,圣愈者,player,AP,sup,550,20,2.00,10.0,3,0.60,—,—,42,3
+bench_tank_1,卫兵甲,player,AD,def（板凳）,1100,32,1.40,22.9,1,0.68,—,—,—,—
+bench_tank_2,卫兵乙,player,AD,def（板凳）,1100,32,1.40,22.9,1,0.68,—,—,—,—
+bench_tank_3,卫兵丙,player,AD,def（板凳）,1100,32,1.40,22.9,1,0.68,—,—,—,—
+shadow_adc_1,暗影射手,enemy,AD,adc,650,70,0.68,102.9,4,0.55,—,—,—,—
+shadow_adc_2,暗影射手,enemy,AD,adc,650,70,0.68,102.9,4,0.55,—,—,—,—
+shadow_adc_3,暗影射手,enemy,AD,adc,650,70,0.68,102.9,4,0.55,—,—,—,—
+shadow_tank_1,暗影卫兵,enemy,AD,def,1600,38,1.40,27.1,1,0.72,—,—,—,—
+shadow_tank_2,暗影卫兵,enemy,AD,def,1600,38,1.40,27.1,1,0.72,—,—,—,—
+shadow_healer,暗影祭司,enemy,AP,sup,620,18,2.00,9.0,3,0.60,—,—,44,3
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+====== Sheet 2: DPS & TTK 分析 ======
+,,
+【己方合计】,,
+HP总量,5620,
+DPS总量,268.8,
+治疗HPS,14.0,
+护盾等效HPS（Blue W每9s×2个×150=33.3）,33.3,
+净有效DPS（扣除辅助）,325.1,
+,,
+【敌方合计】,,
+HP总量,5770,
+DPS总量,372.1,
+治疗HPS,14.7,
+净有效DPS,357.4,
+,,
+【TTK 推导】,,
+简单TTK（玩家打敌）= 5770÷268.8,21.5s,
+简单TTK（敌方打玩家）= 5620÷372.1,15.1s,
+调整TTK（含辅助效果）≈ 5620÷325.1,17.3s,设计目标18s ✓
+,,
+【DPS比值】,,
+敌/己 DPS比,1.38,敌方原始输出比玩家高38%
+,,
+,,
+====== Sheet 3: 加时赛倍率进程 ======
+,,,,,,
+加时秒数,总战斗时间,伤害/攻速倍率,治疗/护盾倍率,ADC实际DPS（原76.9）,护盾实际吸收（原150）
+0,30s,1.0,1.0,76.9,150
+1,31s,1.1,0.9,84.6,135
+2,32s,1.2,0.8,92.3,120
+3,33s,1.3,0.7,100.0,105
+4,34s,1.4,0.6,107.7,90
+5,35s,1.5,0.5,115.4,75
+6,36s,1.6,0.4,123.1,60
+7（上限）,37s,1.7,0.3（下限）,130.7,45
+8,38s,1.7（保持）,0.3（保持）,130.7,45
+9,39s,1.7,0.3,130.7,45
+10,40s,1.7,0.3,130.7,45
+15（平局）,45s,1.7,0.3,130.7,45
+,,,,,,
+【加时赛公式】,,,,,,
+overtimeSec = (elapsedMs - 30000) / 1000,,,,,,
+dmgMult = min(1.70; 1.0 + floor(overtimeSec) × 0.10),,,,,,
+healMult = max(0.30; 1.0 - floor(overtimeSec) × 0.10),,,,,,
+atkCooldown = (atkSpeed × 1000) / dmgMult,,,,,,
+moveCooldown = (moveSpeed × 1000) / dmgMult,,,,,,
+,,,,,,
+,,,,,,
+====== Sheet 4: 技能数值 ======
+,,,,
+【Blue — 魔晶护盾（W · 自动）】,,,,
+触发条件,mana ≥ 90 且 wCooldown ≤ 0,,
+护盾量（自身）,150,,
+护盾量（最近队友）,150,,
+W冷却,9000 ms,,
+护盾叠加方式,累加（shield += 150）,,
+加时赛护盾有效性,×healMult（最低×0.3）,,
+,,,,
+【Blue — 蓝色洪流（大招 · 手动）】,,,,
+触发条件,玩家点击R按钮（每局一次）,,
+伤害量,160（AP）,,
+作用范围,Chebyshev距离 ≤ 3格,,
+最多命中数,理论全部6个敌人,,
+,,,,
+【Sydney — 急袭斩（W · 自动）】,,,,
+触发条件,mana ≥ 80 且 wCooldown ≤ 0,,
+目标选择,最远敌人（与普攻相反）,,
+移位方式,瞬移至目标相邻格,,
+伤害量,150（AD）,,
+晕眩时长（正常）,500 ms,,
+晕眩时长（加时赛公式）,500 × healMult,,
+W冷却,8000 ms,,
+,,,,
+【Sydney — 西德之怒（大招 · 手动）】,,,,
+触发条件,玩家点击R按钮（每局一次）,,
+持续时间,4000 ms,,
+攻速效果,atkCooldown × 0.33（攻速×3）,,
+伤害效果,普攻伤害 × 1.5,,
+狂暴期间DPS,= atk × 1.5 / (atkSpeed × 0.33),,
+Sydney狂暴DPS计算,70 × 1.5 / (1.0 × 0.33) = 318,,
+狂暴期间总输出（4s），318 × 4 = 1272,,
+,,,,
+【蓝条积累分析】,,,,
+英雄,maxMana,manaPerAtk,达满所需攻击次数,首次触发时间
+Blue,90,22,⌈90÷22⌉ = 5次,5 × 1.60 = 8.0s
+Sydney,80,26,⌈80÷26⌉ = 4次,4 × 1.00 = 4.0s
+,,,,
+,,,,
+====== Sheet 5: 圣物系统 ======
+,,,,,,
+ID,名称,效果描述,作用对象,实装公式,对DPS的影响
+ring_conquest,破军之戒,AD攻击力 +22%,己方AD棋子,atk = floor(atk × 1.22),ADC DPS: 76.9→93.6 (+22%)
+guardian_shield,守护圣盾,全队血量 +15%,己方全体,maxHp = hp = floor(maxHp × 1.15),总HP: 5620→6463 (+843)
+eternal_tear,永恒之泪,AP伤害 +20%,己方AP棋子,atk = floor(atk × 1.20),Blue DPS: 15.0→17.5
+battle_soul,战斗之魂,全队攻速 +18%,己方全体,atkSpeed = max(0.4; atkSpeed × 0.82),ADC DPS: 76.9→93.8
+oracle_eye,先知之眼,大招CD −30%,展示用,未实装,—
+,,,,,,
+【各圣物实装细节】,,,,,,
+破军之戒：if (attackType === 'ad') atk = floor(atk × 1.22),,,,,,
+守护圣盾：hp = maxHp = floor(maxHp × 1.15),,,,,,
+永恒之泪：if (attackType === 'ap') atk = floor(atk × 1.20),,,,,,
+战斗之魂：atkSpeed = max(0.4; atkSpeed × (1 - 0.18)),,,,,,
+先知之眼：statKey='cdBonus' 存储但无战斗计算逻辑,,,,,,
+,,,,,,
+====== Sheet 6: 完整伤害公式链 ======
+,,
+【普攻伤害完整流程】,,
+步骤,公式,说明
+1. 计算原始伤害,rawDmg = atk × overtimeDmgMult × furyMult,overtimeDmgMult=1.0（非加时赛）；furyMult=1.0（非狂暴）
+2. 护盾吸收判断,if shield > 0: shieldEff = overtimeActive ? healMult : 1.0,加时赛中护盾效率降低
+3. 护盾吸收量,absorbed = min(shield × shieldEff; rawDmg),护盾最大吸收 = 当前护盾值×效率
+4. 扣减护盾,shield = max(0; shield - absorbed / shieldEff),按原始护盾值比例扣减
+5. 剩余伤害,rawDmg -= absorbed; if rawDmg ≤ 0 → 返回0（完全吸收）,
+6. 减伤计算,actualDmg = max(1; floor(rawDmg × (1 - damageReduction))),damageReduction当前=0
+7. 扣血,target.hp = max(0; target.hp - actualDmg),
+8. 统计追踪,target.statDmgTaken += actualDmg,用于战斗数据面板
+,,
+【治疗完整流程】,,
+步骤,公式,说明
+1. 触发条件,healCooldown ≤ 0 AND role === 'support',每次tick检查
+2. 目标选择,allies.filter(a=>a.hp<a.maxHp).sort by hp/maxHp ascending,选血量比例最低的存活队友
+3. 计算治疗量,healAmt = max(1; floor(healAmount × healMult)),healMult加时赛中递减
+4. 执行治疗,target.hp = min(maxHp; target.hp + healAmt),不超过上限
+5. 统计追踪,piece.statHealDone += healAmt,治疗者自身的治疗统计
+6. 重置CD,healCooldown = healInterval,
+,,
+【攻击冷却完整逻辑】,,
+场景,公式,
+正常战斗,atkCooldown = atkSpeed × 1000,单位ms
+加时赛,atkCooldown = (atkSpeed × 1000) / overtimeDmgMult,加速
+狂暴模式（Sydney R）,atkCooldown = atkSpeed × 1000 × 0.33,×3倍速
+狂暴+加时赛（同时进行）,代码分支独立处理（以furyMode优先）,不叠加
