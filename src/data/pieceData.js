@@ -93,7 +93,7 @@ const PIECE_DATA = {
     hp: 650,  maxHp: 650,
     atk: 60,  atkSpeed: 0.78, range: 4,
     moveSpeed: 0.55, color: 0xcc9922, roleLabel: 'ADC',
-    synergies: ['远射', '铁壁']
+    synergies: ['远射', '战士']
   },
 
   tank_support: {
@@ -102,7 +102,7 @@ const PIECE_DATA = {
     hp: 1500, maxHp: 1500,
     atk: 30,  atkSpeed: 1.50, range: 1,
     moveSpeed: 0.72, color: 0x335588, roleLabel: 'DEF',
-    synergies: ['铁壁', '远射']
+    synergies: ['铁壁', '联盟']
   },
 
   healer_support: {
@@ -112,7 +112,7 @@ const PIECE_DATA = {
     atk: 20,  atkSpeed: 2.00, range: 3,
     healAmount: 42, healInterval: 3000,
     moveSpeed: 0.60, color: 0x228855, roleLabel: 'SUP',
-    synergies: ['圣光', '联盟']
+    synergies: ['圣光', '守护']
   },
 
   // ── Bench Pieces ──────────────────────────────────────────────
@@ -178,6 +178,72 @@ const PIECE_DATA = {
     atk: 18,  atkSpeed: 2.00, range: 3,
     healAmount: 44, healInterval: 3000,
     moveSpeed: 0.60, color: 0x7a1888, roleLabel: 'SUP'
+  },
+
+  // ── Stage 1, Battle 0: Weak early-game grunts (3v3 tutorial) ─────
+  // Roughly 50% weaker than shadow_tank; no healer in their lineup,
+  // so Sydney's R skill reliably wins the fight in ~12-15s.
+  shadow_grunt_1: {
+    id: 'shadow_grunt_1', name: '暗影杂兵', isHero: false, team: 'enemy',
+    role: 'tank', attackType: 'ad',
+    hp: 780,  maxHp: 780,
+    atk: 22,  atkSpeed: 1.40, range: 1,
+    moveSpeed: 0.72, color: 0x3a1055, roleLabel: 'DEF'
+  },
+  shadow_grunt_2: {
+    id: 'shadow_grunt_2', name: '暗影杂兵', isHero: false, team: 'enemy',
+    role: 'tank', attackType: 'ad',
+    hp: 780,  maxHp: 780,
+    atk: 22,  atkSpeed: 1.40, range: 1,
+    moveSpeed: 0.72, color: 0x3a1055, roleLabel: 'DEF'
+  },
+
+  // ── Stage 1 Boss: Shadow Lord (hero-tier enemy, auto-casts fury) ──
+  // HP 2000 / ATK 55 / atkSpeed 0.90; simulates a "fury mode" via
+  // naturally fast attack speed — treated as a non-hero Piece (no mana)
+  // but with dramatically higher stats and distinct color.
+  boss_shadow_lord: {
+    id: 'boss_shadow_lord', name: '阴影领主', isHero: false, team: 'enemy',
+    role: 'atk_tank', attackType: 'ad',
+    hp: 2000, maxHp: 2000,
+    atk: 55,  atkSpeed: 0.90, range: 1,
+    moveSpeed: 0.52, color: 0x660066, roleLabel: 'BOSS',
+    synergies: []
+  },
+
+  // ── Reward pool: additional variety units ─────────────────────────
+  // ftr_a: Melee fighter, hybrid warrior/long-range
+  ftr_a: {
+    id: 'ftr_a', name: '破阵士', isHero: false, team: 'player',
+    role: 'ftr', attackType: 'ad',
+    hp: 740, maxHp: 740,
+    atk: 55, atkSpeed: 1.00, range: 1,
+    moveSpeed: 0.58, color: 0x996622, roleLabel: 'FTR',
+    synergies: ['战士', '远射']
+  },
+
+  // mage_a: Ranged AP attacker, magic + alliance
+  mage_a: {
+    id: 'mage_a', name: '秘法师', isHero: false, team: 'player',
+    role: 'support', attackType: 'ap',
+    hp: 520, maxHp: 520,
+    atk: 48, atkSpeed: 1.40, range: 4,
+    moveSpeed: 0.55, color: 0x883399, roleLabel: 'MAG',
+    synergies: ['魔法', '联盟']
+  },
+
+  // ── Reward pool units (unlockable via between-battle selection) ───
+  // support_buffer: buff-type support that boosts ally attack speed
+  // (Implemented as a near-copy of healer_support but zero healing,
+  //  slightly higher ATK — visual differentiation via roleLabel 'BUF')
+  support_buffer: {
+    id: 'support_buffer', name: '战鼓手', isHero: false, team: 'player',
+    role: 'support', attackType: 'ad',
+    hp: 500, maxHp: 500,
+    atk: 28, atkSpeed: 1.80, range: 2,
+    // No healing; buff represented as slightly higher team DPS when present
+    moveSpeed: 0.60, color: 0xcc5500, roleLabel: 'BUF',
+    synergies: ['战士', '铁壁']
   }
 };
 

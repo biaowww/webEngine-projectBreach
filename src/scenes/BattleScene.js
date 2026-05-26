@@ -26,8 +26,9 @@ class BattleScene extends Phaser.Scene {
     this._statsTeam  = 'player'; // which team's data the stats panel shows
     this._statsRows  = [];       // text-object rows for stats table
 
-    // Pick random relic for this run
-    this.relic = RELICS[Math.floor(Math.random() * RELICS.length)];
+    // Use campaign relic (fixed for this run); fall back to random if no campaign
+    this.relic = CampaignState.currentRelic ||
+      RELICS[Math.floor(Math.random() * RELICS.length)];
 
     // Space bar to pause / resume
     this._spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -151,7 +152,13 @@ class BattleScene extends Phaser.Scene {
 
   // ── Piece spawning ───────────────────────────────────────────────
   _spawnPieces() {
+    const battle = CAMPAIGN_BATTLES[CampaignState.currentBattle];
+
     const make = (id, col, row, onBench = false, slot = null) => {
+      if (!PIECE_DATA[id]) {
+        console.warn('[BattleScene] Unknown pieceId:', id);
+        return null;
+      }
       const data = JSON.parse(JSON.stringify(PIECE_DATA[id]));
       const piece = data.isHero
         ? new Hero(this, data, col, row)
@@ -159,7 +166,7 @@ class BattleScene extends Phaser.Scene {
       if (onBench) {
         piece.onBench = true;
         piece.benchSlot = slot;
-        piece.col = 0; piece.row = 0; // unused while on bench
+        piece.col = 0; piece.row = 0;
         const wp = this.benchSlotToWorld(slot);
         piece.visualX = wp.x;
         piece.visualY = wp.y;
@@ -169,9 +176,23 @@ class BattleScene extends Phaser.Scene {
       return piece;
     };
 
-    INITIAL_PLACEMENT.player.forEach(p => make(p.pieceId, p.col, p.row));
-    INITIAL_PLACEMENT.enemy.forEach(p => make(p.pieceId, p.col, p.row));
-    INITIAL_PLACEMENT.bench.forEach((id, i) => make(id, 0, 0, true, i));
+    // ── Player side: build from CampaignState ─────────────────────
+    const maxOnBoard = battle ? battle.maxPlayerOnBoard : 6;
+
+    // Collect all player piece ids (heroes first, then roster)
+    const allPlayerIds = [CampaignState.mainHero];
+    if (CampaignState.subHero) allPlayerIds.push(CampaignState.subHero);
+    allPlayerIds.push(...CampaignState.roster);
+
+    // Use auto-placement to get board + bench assignments
+    const { placements, benchSlots } = autoPlacePlayer(allPlayerIds, maxOnBoard, PIECE_DATA);
+
+    placements.forEach(({ pieceId, col, row }) => make(pieceId, col, row));
+    benchSlots.forEach(({ pieceId, slot })     => make(pieceId, 0, 0, true, slot));
+
+    // ── Enemy side: from campaign config ──────────────────────────
+    const enemyList = battle ? battle.enemy : INITIAL_PLACEMENT.enemy;
+    enemyList.forEach(p => make(p.pieceId, p.col, p.row));
   }
 
   // ── Relic buffs ──────────────────────────────────────────────────
@@ -199,12 +220,54 @@ class BattleScene extends Phaser.Scene {
     const heroes = this.allPieces.filter(p => p instanceof Hero);
     heroes.forEach((hero, i) => this._buildHeroSlot(hero, 6, 36 + i * 180));
 
-    // Synergy section
+    // Dynamic synergy section
     const syY = 36 + heroes.length * 180 + 8;
     this.add.text(8, syY, '羁  绊', { fontSize: '10px', color: '#6655aa', fontStyle: 'bold' });
-    [['铁壁 ×3', 0x4488cc], ['远射 ×2', 0xccaa22], ['圣光 ×1', 0x44cc88]].forEach(([lbl, col], i) => {
-      const r = this.add.rectangle(14, syY + 18 + i * 18, 8, 8, col);
-      this.add.text(24, syY + 14 + i * 18, lbl, { fontSize: '9px', color: '#aabbcc' });
+
+    const playerIds = this.allPieces.filter(p => p.team === 'player').map(p => p.id);
+    const synCounts = calcSynergies(playerIds);
+    let row = 0;
+    Object.entries(synCounts).sort((a,b) => b[1]-a[1]).forEach(([syn, cnt]) => {
+      const thresh = getActiveThreshold(syn, cnt);
+      const next   = getNextThreshold(syn, cnt);
+      const def    = SYNERGY_DATA[syn];
+      const col    = thresh
+        ? (def?.color || 0x6677aa)
+        : 0x2a3a44;
+      const label  = thresh ? `${syn} ×${cnt}` : `${syn} ×${cnt}`;
+      const subLabel = thresh ? thresh.bonus : (next ? `→${next.count}解锁` : '');
+      const r = this.add.rectangle(14, syY + 18 + row * 30, 8, 8, col);
+      this.add.text(24, syY + 14 + row * 30, label, {
+        fontSize: '9px', color: thresh ? '#aabbcc' : '#3a4a55'
+      });
+      if (subLabel) {
+        this.add.text(24, syY + 26 + row * 30, subLabel, {
+          fontSize: '7px', color: thresh ? '#' + col.toString(16).padStart(6,'0') : '#2a3a44',
+          wordWrap: { width: 148 }
+        });
+      }
+      row++;
+    });
+
+    // Abort button (pre-battle only)
+    if (!this.battleStarted) {
+      this._abortBtn = this.add.text(10, 650, '中止战役', {
+        fontSize: '9px', color: '#441a1a'
+      }).setInteractive({ cursor: 'pointer' });
+      this._abortBtn.on('pointerover', () => this._abortBtn.setStyle({ color: '#cc3333' }));
+      this._abortBtn.on('pointerout',  () => this._abortBtn.setStyle({ color: '#441a1a' }));
+      this._abortBtn.on('pointerdown', () => this._abortCampaign());
+    }
+  }
+
+  _abortCampaign() {
+    this.cameras.main.flash(300, 120, 20, 20);
+    this.time.delayedCall(300, () => {
+      CampaignState.reset();
+      this.cameras.main.fadeOut(280, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('WorldMapScene');
+      });
     });
   }
 
@@ -289,8 +352,12 @@ class BattleScene extends Phaser.Scene {
 
     this.add.rectangle(CX, 345, BW - RX, 665, 0x080814).setStrokeStyle(1, 0x2a2a4a);
 
-    // Stage
-    this.add.text(CX, 20, '第2阶段 · 第1战', { fontSize: '11px', color: '#7788aa', align: 'center' }).setOrigin(0.5, 0);
+    // Stage — read from campaign config
+    const battleCfg   = CAMPAIGN_BATTLES[CampaignState.currentBattle];
+    const stageTitle  = battleCfg?.title || '第1阶段 · 第1战';
+    const isBoss      = battleCfg?.isBoss || false;
+    const titleColor  = isBoss ? '#cc6622' : '#7788aa';
+    this.add.text(CX, 20, stageTitle, { fontSize: '11px', color: titleColor, align: 'center' }).setOrigin(0.5, 0);
 
     // Timer
     this.add.text(CX, 40, '战斗时长', { fontSize: '9px', color: '#556677', align: 'center' }).setOrigin(0.5, 0);
@@ -304,13 +371,16 @@ class BattleScene extends Phaser.Scene {
     this.overtimeBar = this.add.rectangle(RX + 8, 95, 120, 7, 0xdd6633).setOrigin(0, 0.5);
 
     // Alive counts
+    const enemyCount = (CAMPAIGN_BATTLES[CampaignState.currentBattle]?.enemy || []).length;
+    const allyCount  = CAMPAIGN_BATTLES[CampaignState.currentBattle]?.maxPlayerOnBoard || 6;
+
     this.add.text(CX, 110, '敌方剩余', { fontSize: '9px', color: '#aa6677', align: 'center' }).setOrigin(0.5, 0);
-    this.enemyCountText = this.add.text(CX, 122, '6', {
+    this.enemyCountText = this.add.text(CX, 122, String(enemyCount), {
       fontSize: '20px', color: '#ff8899', fontStyle: 'bold', align: 'center'
     }).setOrigin(0.5, 0);
 
     this.add.text(CX, 152, '己方剩余', { fontSize: '9px', color: '#6677aa', align: 'center' }).setOrigin(0.5, 0);
-    this.allyCountText = this.add.text(CX, 164, '6', {
+    this.allyCountText = this.add.text(CX, 164, String(allyCount), {
       fontSize: '20px', color: '#88aaff', fontStyle: 'bold', align: 'center'
     }).setOrigin(0.5, 0);
 
@@ -590,6 +660,10 @@ class BattleScene extends Phaser.Scene {
 
   // Board count limit helpers
   _boardLimit() {
+    // Use the campaign battle's maxPlayerOnBoard if available
+    const cfgLimit = CAMPAIGN_BATTLES[CampaignState.currentBattle]?.maxPlayerOnBoard;
+    if (cfgLimit !== undefined) return cfgLimit;
+    // Fallback: match enemy count (original behaviour)
     return this.allPieces.filter(p => p.team === 'enemy' && !p.onBench).length;
   }
   _canAddToBoard() {
@@ -675,6 +749,7 @@ class BattleScene extends Phaser.Scene {
     });
 
     if (this.preBattleHint) this.preBattleHint.setVisible(false);
+    if (this._abortBtn) this._abortBtn.setVisible(false);
     this.statusText.setText('战斗已开始');
 
     // Disable drag
@@ -1050,10 +1125,35 @@ class BattleScene extends Phaser.Scene {
 
   // ── Battle end ───────────────────────────────────────────────────
   onBattleEnd(result) {
+    const allyAlive = this.allPieces.filter(p => p.alive && !p.onBench && p.team === 'player').length;
+
+    // Snapshot stats for CampaignEndScene "查看本局数据"
+    const snapshot = (team) => this.allPieces
+      .filter(p => p.team === team && !p.onBench)
+      .map(p => ({
+        name:   p.name.split('  ')[0],
+        adDmg:  Math.floor(p.statDmgAD    || 0),
+        apDmg:  Math.floor(p.statDmgAP    || 0),
+        taken:  Math.floor(p.statDmgTaken || 0),
+        heal:   Math.floor(p.statHealDone || 0),
+        alive:  p.alive
+      }))
+      .sort((a,b) => (b.adDmg+b.apDmg) - (a.adDmg+a.apDmg));
+
+    CampaignState.lastBattleStats = {
+      result,
+      elapsed:     this.elapsedSec,
+      allyAlive,
+      relicName:   this.relic?.name,
+      battleTitle: CAMPAIGN_BATTLES[CampaignState.currentBattle]?.title || '',
+      playerStats: snapshot('player'),
+      enemyStats:  snapshot('enemy')
+    };
+
     this.scene.start('ResultScene', {
       result,
-      elapsed: this.elapsedSec,
-      allyAlive: this.allPieces.filter(p => p.alive && !p.onBench && p.team === 'player').length,
+      elapsed:   this.elapsedSec,
+      allyAlive,
       relicName: this.relic?.name
     });
   }

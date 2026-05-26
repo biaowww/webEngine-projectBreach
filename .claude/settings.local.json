@@ -140,7 +140,15 @@
       "Bash(chmod -R u+w /Users/wvngbvao483/Desktop/元艺极客/ProjectBreach/game_codebase/gkNextEngine-projectBreach/out/build/default-macos-arm64/vcpkg_installed/arm64-osx/share/xxhash/)",
       "Bash(cat)",
       "Bash(echo \"wrote new config, result: $?\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(pip3 install *)",
+      "Bash(node -e ' *)",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "mcp__Claude_in_Chrome__javascript_tool"
     ],
     "additionalDirectories": [
       "/Users/wvngbvao483/Desktop/元艺极客/ProjectBreach/game_codebase/gkNextEngine-projectBreach/src/Application",

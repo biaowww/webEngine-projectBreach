@@ -1,12 +1,22 @@
 // main.js — Phaser game config and entry point
 
-const game = new Phaser.Game({
+const game = window.game = new Phaser.Game({
   type: Phaser.AUTO,
   width: 880,
   height: 690,
   parent: 'canvas-wrapper',
   backgroundColor: '#0d0d1a',
-  scene: [BattleScene, ResultScene],
+  // Scene order: first scene in array is the startup scene
+  scene: [
+    WorldMapScene,        // entry point — world map
+    CityScene,            // 位面城 city view
+    CampaignStartScene,   // campaign intro + hero display
+    CampaignMapScene,     // roguelite node map (between battles)
+    BetweenBattleScene,   // post-battle reward + hero select
+    CampaignEndScene,     // campaign win/lose screen
+    BattleScene,          // main battle
+    ResultScene           // single-battle result popup
+  ],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
@@ -14,5 +24,7 @@ const game = new Phaser.Game({
   render: {
     antialias: true,
     pixelArt: false
-  }
+  },
+  // Keep the game loop running even when the tab loses focus / visibility
+  disableVisibilityChange: true
 });

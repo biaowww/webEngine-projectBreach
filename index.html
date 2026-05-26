@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>空裂 · Web Demo — 第2阶段第1战</title>
+  <title>空裂 · Web Demo — 第1阶段战役</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -29,6 +29,9 @@
     }
 
     #canvas-wrapper {
+      /* Explicit dimensions so Phaser.Scale.FIT can compute correctly */
+      width: 880px;
+      height: 690px;
       /* Subtle perspective for a "board game on table" feeling */
       transform: perspective(1400px) rotateX(6deg);
       transform-origin: center bottom;
@@ -58,16 +61,40 @@
 
   <div id="canvas-wrapper"></div>
 
-  <div id="game-hint">开战前可拖拽调整阵型 · 满蓝自动释放 W · 点击 R 手动大招 · 15秒后进入加时</div>
+  <div id="game-hint">开战前可拖拽调整阵型 · 满蓝自动释放 W · 点击 R 手动大招 · 30秒后进入加时</div>
+
+  <!-- Ensure Phaser's rAF loop runs even when the tab is reported as hidden
+       (e.g. inside certain browser-extension environments) -->
+  <script>
+    try {
+      Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    } catch(e) {}
+  </script>
 
   <!-- Phaser 3 -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
   <!-- Game scripts — order matters (no module system) -->
+  <!-- State & data -->
+  <script src="src/systems/CampaignState.js"></script>
   <script src="src/data/pieceData.js"></script>
+  <script src="src/data/campaignData.js"></script>
+  <script src="src/data/synergyData.js"></script>
+  <!-- Utilities -->
+  <script src="src/utils/autoPlacement.js"></script>
+  <!-- Entities -->
   <script src="src/entities/Piece.js"></script>
   <script src="src/entities/Hero.js"></script>
+  <!-- Systems -->
   <script src="src/systems/BattleSystem.js"></script>
+  <!-- Scenes — navigation order: World → City → Campaign -->
+  <script src="src/scenes/WorldMapScene.js"></script>
+  <script src="src/scenes/CityScene.js"></script>
+  <script src="src/scenes/CampaignStartScene.js"></script>
+  <script src="src/scenes/CampaignMapScene.js"></script>
+  <script src="src/scenes/BetweenBattleScene.js"></script>
+  <script src="src/scenes/CampaignEndScene.js"></script>
   <script src="src/scenes/BattleScene.js"></script>
   <script src="src/scenes/ResultScene.js"></script>
   <script src="src/main.js"></script>
