@@ -247,6 +247,10 @@ const PIECE_DATA = {
   }
 };
 
+// Expose globals for cross-script access (const doesn't go on window automatically)
+window.PIECE_DATA = PIECE_DATA;
+window.RELICS     = RELICS;
+
 // ── Initial Placement ──────────────────────────────────────────────
 // Board: 7 cols (0–6) × 8 rows (0–7)
 // Enemy zone: rows 0–3  (row 3 = front, row 0 = back corner)

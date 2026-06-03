@@ -26,5 +26,12 @@ const game = window.game = new Phaser.Game({
     pixelArt: false
   },
   // Keep the game loop running even when the tab loses focus / visibility
-  disableVisibilityChange: true
+  disableVisibilityChange: true,
+  // Use setTimeout instead of requestAnimationFrame so the loop runs even
+  // in environments where rAF is suppressed (e.g. background tabs, browser
+  // extension execution contexts with a 0-dimension iframe)
+  fps: {
+    forceSetTimeOut: true,
+    target: 60
+  }
 });

@@ -28,18 +28,17 @@
       user-select: none;
     }
 
+    /* Phaser's parent — no 3D transforms (they corrupt getBoundingClientRect()
+       and break Phaser's input coordinate mapping).
+       Visual depth is achieved with box-shadow instead. */
     #canvas-wrapper {
-      /* Explicit dimensions so Phaser.Scale.FIT can compute correctly */
       width: 880px;
       height: 690px;
-      /* Subtle perspective for a "board game on table" feeling */
-      transform: perspective(1400px) rotateX(6deg);
-      transform-origin: center bottom;
+      overflow: hidden;
       box-shadow:
         0 30px 60px rgba(0, 0, 0, 0.8),
         0 0 40px rgba(40, 60, 120, 0.25);
       border-radius: 4px;
-      overflow: hidden;
     }
 
     #canvas-wrapper canvas {
@@ -64,11 +63,20 @@
   <div id="game-hint">开战前可拖拽调整阵型 · 满蓝自动释放 W · 点击 R 手动大招 · 30秒后进入加时</div>
 
   <!-- Ensure Phaser's rAF loop runs even when the tab is reported as hidden
-       (e.g. inside certain browser-extension environments) -->
+       or unfocused (e.g. inside certain browser-extension environments) -->
   <script>
     try {
-      Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+      // Prevent Phaser from pausing on visibilitychange
+      Object.defineProperty(document, 'hidden',          { get: () => false,     configurable: true });
+      Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
       document.dispatchEvent(new Event('visibilitychange'));
+    } catch(e) {}
+    try {
+      // Prevent Phaser from pausing on focus loss — dispatch focus immediately
+      // and keep re-dispatching so Phaser's hasFocus stays true
+      window.dispatchEvent(new FocusEvent('focus'));
+      // Re-assert focus every second to survive any subsequent blur events
+      setInterval(() => window.dispatchEvent(new FocusEvent('focus')), 1000);
     } catch(e) {}
   </script>
 
@@ -76,28 +84,29 @@
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
   <!-- Game scripts — order matters (no module system) -->
+  <!-- ?v=2 busts browser cache after the input-fix refactor -->
   <!-- State & data -->
-  <script src="src/systems/CampaignState.js"></script>
-  <script src="src/data/pieceData.js"></script>
-  <script src="src/data/campaignData.js"></script>
-  <script src="src/data/synergyData.js"></script>
+  <script src="src/systems/CampaignState.js?v=2"></script>
+  <script src="src/data/pieceData.js?v=2"></script>
+  <script src="src/data/campaignData.js?v=2"></script>
+  <script src="src/data/synergyData.js?v=2"></script>
   <!-- Utilities -->
-  <script src="src/utils/autoPlacement.js"></script>
+  <script src="src/utils/autoPlacement.js?v=2"></script>
   <!-- Entities -->
-  <script src="src/entities/Piece.js"></script>
-  <script src="src/entities/Hero.js"></script>
+  <script src="src/entities/Piece.js?v=2"></script>
+  <script src="src/entities/Hero.js?v=2"></script>
   <!-- Systems -->
-  <script src="src/systems/BattleSystem.js"></script>
+  <script src="src/systems/BattleSystem.js?v=2"></script>
   <!-- Scenes — navigation order: World → City → Campaign -->
-  <script src="src/scenes/WorldMapScene.js"></script>
-  <script src="src/scenes/CityScene.js"></script>
-  <script src="src/scenes/CampaignStartScene.js"></script>
-  <script src="src/scenes/CampaignMapScene.js"></script>
-  <script src="src/scenes/BetweenBattleScene.js"></script>
-  <script src="src/scenes/CampaignEndScene.js"></script>
-  <script src="src/scenes/BattleScene.js"></script>
-  <script src="src/scenes/ResultScene.js"></script>
-  <script src="src/main.js"></script>
+  <script src="src/scenes/WorldMapScene.js?v=2"></script>
+  <script src="src/scenes/CityScene.js?v=2"></script>
+  <script src="src/scenes/CampaignStartScene.js?v=2"></script>
+  <script src="src/scenes/CampaignMapScene.js?v=2"></script>
+  <script src="src/scenes/BetweenBattleScene.js?v=2"></script>
+  <script src="src/scenes/CampaignEndScene.js?v=2"></script>
+  <script src="src/scenes/BattleScene.js?v=2"></script>
+  <script src="src/scenes/ResultScene.js?v=2"></script>
+  <script src="src/main.js?v=2"></script>
 
 </body>
 </html>
