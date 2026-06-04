@@ -76,9 +76,6 @@ class CityScene extends Phaser.Scene {
       });
     });
 
-    // Mobile: zoom + drag-to-pan; centre on the two entry cards
-    MobileUtil.enableCameraDrag(this, { centerX: 440, centerY: 310 });
-
     this.cameras.main.fadeIn(350, 0, 0, 0);
   }
 

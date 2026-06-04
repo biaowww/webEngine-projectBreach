@@ -48,14 +48,22 @@ class WorldMapScene extends Phaser.Scene {
     REGIONS.forEach(reg => this._buildRegionNode(reg));
 
     // ── Hero selector (bottom-left) ────────────────────────────────
-    this._buildHeroSelector();
+    // On mobile the Phaser selector is replaced by a fixed HTML overlay
+    // so it stays pinned to screen bottom-left even as the map is panned.
+    if (MobileUtil.isMobile()) {
+      MobileUtil.showHeroSelector();
+      this.events.once('shutdown', () => MobileUtil.hideHeroSelector());
+      this.events.once('destroy',  () => MobileUtil.hideHeroSelector());
+    } else {
+      this._buildHeroSelector();
+    }
 
     // ── Version label ──────────────────────────────────────────────
     this.add.text(W - 10, H - 10, 'Demo · 第1阶段开放', {
       fontSize: '9px', color: '#1a2233'
     }).setOrigin(1,1);
 
-    // ── Mobile: camera zoom + drag-to-pan ─────────────────────────
+    // ── Mobile: camera zoom + drag-to-pan + pinch-to-zoom ─────────
     // Focus on 位面城 (390, 310) so the only unlocked node is centred.
     MobileUtil.enableCameraDrag(this, { centerX: 390, centerY: 340 });
 

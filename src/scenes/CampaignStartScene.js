@@ -105,9 +105,6 @@ class CampaignStartScene extends Phaser.Scene {
     fadeIn(startBtn, 740);
     fadeIn(hint, 860);
 
-    // Mobile: zoom + drag-to-pan so all content (incl. start button) is reachable
-    MobileUtil.enableCameraDrag(this, { centerX: 440, centerY: 370 });
-
     // Subtle pulse on start button
     this.time.delayedCall(800, () => {
       this.tweens.add({

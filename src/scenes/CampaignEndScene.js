@@ -101,9 +101,6 @@ class CampaignEndScene extends Phaser.Scene {
     // ── Particles ─────────────────────────────────────────────────
     if (win) this._winBurst(CX, CY);
     else     this._loseFlash(CX, CY);
-
-    // Mobile: zoom + drag-to-pan
-    MobileUtil.enableCameraDrag(this, { centerX: 440, centerY: 345 });
   }
 
   // ── Stats overlay ─────────────────────────────────────────────────

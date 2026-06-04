@@ -1,8 +1,15 @@
-// MobileUtil.js — mobile detection and touch-drag helpers for all scenes
+// MobileUtil.js — mobile detection, touch-drag, pinch-zoom helpers
 //
-// Usage in a Phaser scene:
+// Usage:
+//   // In a "map" scene (World / Campaign):
 //   MobileUtil.enableCameraDrag(this, { centerX: 390, centerY: 310 });
-//   MobileUtil.onTap(this, circle, () => { /* navigate */ });
+//
+//   // In WorldMapScene to surface the hero selector overlay:
+//   MobileUtil.showHeroSelector();
+//
+//   // In BattleScene:
+//   MobileUtil.showBattleBar();   // create()
+//   MobileUtil.hideBattleBar();   // shutdown()
 
 const MobileUtil = {
 
@@ -10,51 +17,51 @@ const MobileUtil = {
 
   isMobile() {
     return ('ontouchstart' in window) ||
-           !!(window.matchMedia && window.matchMedia('(max-width: 1024px)').matches);
+           !!(window.matchMedia && window.matchMedia('(max-width: 1023px)').matches);
   },
 
   isPortrait() {
     return !!(window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
   },
 
-  isMobilePortrait() {
-    return this.isMobile() && this.isPortrait();
-  },
-
-  // ── Camera zoom + drag-to-pan for "map / city / info" scenes ──────────────
+  // ── Camera zoom + drag-to-pan + pinch-to-zoom for map scenes ──────────
 
   /**
-   * On mobile-portrait: zoom in so that 1 game-pixel ≈ 1 CSS-pixel
-   * (making text/nodes large and finger-tap-friendly), then clamp the camera
-   * within the world and let the user drag to explore the rest.
+   * Enable touch/mouse camera interaction for WorldMapScene and CampaignMapScene.
    *
-   * On desktop / landscape the call is a no-op for zoom; drag-to-pan is
-   * still wired up in case the user mouse-drags on a large monitor.
+   * Mobile-portrait: zooms so 1 game-unit ≈ 1 CSS-pixel (making nodes and
+   * text comfortably large), sets camera bounds, and enables:
+   *   • One-finger drag  → pan the camera
+   *   • Two-finger pinch → zoom in / out (pinch)
    *
-   * @param {Phaser.Scene} scene  – the scene to augment
-   * @param {object}       opts
-   *   centerX {number} initial camera focus X in game units (default 440)
-   *   centerY {number} initial camera focus Y in game units (default 345)
-   *   worldW  {number} world / scroll boundary width  (default 880)
-   *   worldH  {number} world / scroll boundary height (default 690)
+   * Desktop: minimal zoom (1×); drag still works for mouse users who want it.
+   *
+   * @param {Phaser.Scene} scene
+   * @param {object} [opts]
+   *   centerX {number} initial camera focus X (default 440)
+   *   centerY {number} initial camera focus Y (default 345)
+   *   worldW  {number} world scroll boundary width  (default 880)
+   *   worldH  {number} world scroll boundary height (default 690)
    */
   enableCameraDrag(scene, { centerX = 440, centerY = 345, worldW = 880, worldH = 690 } = {}) {
     const cam = scene.cameras.main;
 
-    if (this.isMobilePortrait()) {
-      // Phaser's Scale.FIT already scales the canvas to fit viewport width.
-      // We undo that compression with camera zoom → 1 game-unit ≈ 1 CSS-pixel.
-      const displayW = scene.scale.displaySize.width || scene.scale.width;
-      const zoom     = scene.scale.width / displayW;   // e.g. 880/390 ≈ 2.26
-      cam.setZoom(Math.max(1, zoom));
-      cam.setBounds(0, 0, worldW, worldH);
-      cam.centerOn(centerX, centerY);
+    // ── Initial zoom on mobile portrait ──────────────────────────────
+    let minZoom = 1;
+    if (this.isMobile() && this.isPortrait()) {
+      const dw   = scene.scale.displaySize.width || scene.scale.width;
+      const zoom = scene.scale.width / dw;      // e.g. 880/390 ≈ 2.26
+      minZoom = Math.max(1, zoom);
+      cam.setZoom(minZoom);
     }
+    cam.setBounds(0, 0, worldW, worldH);
+    cam.centerOn(centerX, centerY);
 
-    // ── Drag-to-pan (touch + mouse) ────────────────────────────────────
+    // ── Input state ──────────────────────────────────────────────────
     let startX = 0, startY = 0;
+    let pinchLastDist = 0;
     scene._mapPanActive = false;
-    const THRESHOLD = 10; // canvas-pixels before gesture counts as a pan
+    const DRAG_THRESHOLD = 10; // canvas-pixels before a move becomes a pan
 
     scene.input.on('pointerdown', (ptr) => {
       startX = ptr.x;
@@ -63,8 +70,28 @@ const MobileUtil = {
     });
 
     scene.input.on('pointermove', (ptr) => {
+      // ── Two-finger pinch-to-zoom ────────────────────────────────
+      const activePtrs = scene.input.manager.pointers.filter(p => p.active && p.isDown);
+      if (activePtrs.length >= 2) {
+        scene._mapPanActive = true;    // block tap-through during pinch
+        const p0 = activePtrs[0], p1 = activePtrs[1];
+        const dist = Phaser.Math.Distance.Between(p0.x, p0.y, p1.x, p1.y);
+        if (pinchLastDist > 0 && dist > 0) {
+          const newZoom = Phaser.Math.Clamp(
+            cam.zoom * (dist / pinchLastDist),
+            minZoom,
+            5
+          );
+          cam.setZoom(newZoom);
+        }
+        pinchLastDist = dist;
+        return; // don't also pan while pinching
+      }
+      pinchLastDist = 0;
+
+      // ── One-finger drag-to-pan ──────────────────────────────────
       if (!ptr.isDown) return;
-      if (Math.hypot(ptr.x - startX, ptr.y - startY) > THRESHOLD) {
+      if (Math.hypot(ptr.x - startX, ptr.y - startY) > DRAG_THRESHOLD) {
         scene._mapPanActive = true;
       }
       if (scene._mapPanActive) {
@@ -74,14 +101,29 @@ const MobileUtil = {
       }
     });
 
-    // Keep the flag true for one extra tick so a lift-finger doesn't
-    // accidentally fire a tap on whatever the finger was resting on.
     scene.input.on('pointerup', () => {
+      pinchLastDist = 0;
+      // Keep flag true for one tick so the lift doesn't fire a stray tap
       scene.time.delayedCall(60, () => { scene._mapPanActive = false; });
     });
   },
 
-  // ── Mobile battle-bar helpers (called from HTML onclick) ─────────────
+  // ── Pan-aware tap handler ──────────────────────────────────────────────
+
+  /**
+   * Attach a tap handler that fires only when the touch was NOT a drag/pan.
+   * Uses an 80 ms delay on mobile so pointermove has time to set _mapPanActive.
+   */
+  onTap(scene, obj, handler) {
+    const delay = this.isMobile() ? 80 : 0;
+    obj.on('pointerdown', () => {
+      scene.time.delayedCall(delay, () => {
+        if (!scene._mapPanActive) handler();
+      });
+    });
+  },
+
+  // ── Battle bar (BattleScene) ───────────────────────────────────────────
 
   _battleScene() {
     return window.game?.scene?.getScene('BattleScene');
@@ -97,31 +139,12 @@ const MobileUtil = {
     if (s && !s.battleStarted) s._startBattle();
   },
 
-  _mobileW() {
-    const s = this._battleScene();
-    if (!s || !s.battleStarted) return;
-    const enemies = s.allPieces.filter(p => p.alive && !p.onBench && p.team === 'enemy');
-    s.allPieces
-      .filter(p => p instanceof Hero && p.alive && !p.onBench && p.team === 'player')
-      .forEach(hero => hero.tryWSkill(enemies));
-  },
-
-  _mobileR() {
-    const s = this._battleScene();
-    if (!s || !s.battleStarted) return;
-    const enemies = s.allPieces.filter(p => p.alive && !p.onBench && p.team === 'enemy');
-    const hero = s.allPieces.find(
-      p => p instanceof Hero && p.alive && !p.onBench && !p.ultimateUsed && p.team === 'player'
-    );
-    if (hero) hero.castUltimate(enemies);
-  },
-
   _mobilePause() {
     const s = this._battleScene();
     if (s && s.battleStarted) s._togglePause();
   },
 
-  /** Show the mobile battle bar + optional portrait hint. */
+  /** Show the mobile battle bar + optional portrait orientation hint. */
   showBattleBar() {
     if (!this.isMobile()) return;
     const bar  = document.getElementById('mobile-battle-bar');
@@ -129,8 +152,6 @@ const MobileUtil = {
     if (bar)  bar.style.display  = 'flex';
     if (hint && this.isPortrait()) hint.style.display = 'block';
     this._refreshBattleBar();
-
-    // Keep button states fresh every 300 ms
     if (!this._barInterval) {
       this._barInterval = setInterval(() => this._refreshBattleBar(), 300);
     }
@@ -150,43 +171,16 @@ const MobileUtil = {
   _refreshBattleBar() {
     const s = this._battleScene();
     if (!s) return;
-
     const started = !!s.battleStarted;
     const paused  = s.battleSystem?.isPaused;
 
-    // Start button
     const btnStart = document.getElementById('mb-start');
     if (btnStart) {
-      if (started) {
-        btnStart.textContent = '已开战';
-        btnStart.disabled = true;
-        btnStart.classList.remove('primary');
-      } else {
-        btnStart.textContent = '▶ 开战';
-        btnStart.disabled = false;
-        btnStart.classList.add('primary');
-      }
+      btnStart.textContent = started ? '已开战' : '▶ 开战';
+      btnStart.disabled    = started;
+      btnStart.classList.toggle('primary', !started);
     }
 
-    // W button — enabled when any hero is alive and has full MP
-    const btnW = document.getElementById('mb-w');
-    if (btnW) {
-      const canW = started && s.allPieces.some(
-        p => p instanceof Hero && p.alive && !p.onBench && p.mp >= p.maxMp
-      );
-      btnW.disabled = !canW;
-    }
-
-    // R button — enabled when any hero ult is available
-    const btnR = document.getElementById('mb-r');
-    if (btnR) {
-      const canR = started && s.allPieces.some(
-        p => p instanceof Hero && p.alive && !p.onBench && !p.ultimateUsed
-      );
-      btnR.disabled = !canR;
-    }
-
-    // Pause button
     const btnPause = document.getElementById('mb-pause');
     if (btnPause) {
       btnPause.disabled    = !started;
@@ -194,25 +188,17 @@ const MobileUtil = {
     }
   },
 
-  // ── Pan-aware tap handler ──────────────────────────────────────────────
+  // ── Hero selector overlay (WorldMapScene) ─────────────────────────────
 
-  /**
-   * Attach a "pointerdown" handler that fires only when the finger was NOT
-   * dragging (i.e. it was a genuine tap / click).
-   *
-   * On desktop the handler runs on the next Phaser tick (imperceptible).
-   * On mobile it waits 80 ms so pointermove has time to set _mapPanActive.
-   *
-   * @param {Phaser.Scene}                    scene
-   * @param {Phaser.GameObjects.GameObject}   obj
-   * @param {Function}                        handler
-   */
-  onTap(scene, obj, handler) {
-    const delay = this.isMobile() ? 80 : 0;
-    obj.on('pointerdown', () => {
-      scene.time.delayedCall(delay, () => {
-        if (!scene._mapPanActive) handler();
-      });
-    });
+  /** Show the fixed HTML hero selector overlay at screen bottom-left. */
+  showHeroSelector() {
+    if (!this.isMobile()) return;
+    const el = document.getElementById('mobile-hero-sel');
+    if (el) el.style.display = 'flex';
+  },
+
+  hideHeroSelector() {
+    const el = document.getElementById('mobile-hero-sel');
+    if (el) el.style.display = 'none';
   },
 };
