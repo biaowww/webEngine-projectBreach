@@ -2,7 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- viewport-fit=cover fills the "safe area" on notched phones;
+       user-scalable=no prevents accidental pinch-zoom on the game canvas -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+        viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>空裂 · Web Demo — 第1阶段战役</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,10 +17,12 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
+      min-height: 100dvh;           /* dvh = dynamic viewport height on mobile */
       font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
       color: #ccc;
       overflow: hidden;
+      /* allow the mobile battle bar to appear below the canvas */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     #game-title {
@@ -28,21 +34,26 @@
       user-select: none;
     }
 
-    /* Phaser's parent — no 3D transforms (they corrupt getBoundingClientRect()
-       and break Phaser's input coordinate mapping).
-       Visual depth is achieved with box-shadow instead. */
+    /* ── Canvas wrapper ───────────────────────────────────────────────────
+       Desktop  : fixed 880×690 – no change from before.
+       Mobile   : fills viewport width (max 880px), height locked by aspect-ratio.
+       Phaser's Scale.FIT automatically scales the canvas to fit this box.   */
     #canvas-wrapper {
-      width: 880px;
-      height: 690px;
+      width: min(880px, 100vw);
+      aspect-ratio: 880 / 690;
       overflow: hidden;
       box-shadow:
         0 30px 60px rgba(0, 0, 0, 0.8),
         0 0 40px rgba(40, 60, 120, 0.25);
       border-radius: 4px;
+      /* Explicit pixel sizes kept for Phaser's initial layout calculation
+         on desktop.  They are overridden below on mobile. */
+      max-width: 880px;
     }
 
     #canvas-wrapper canvas {
       display: block;
+      touch-action: none;  /* hand all pointer events to Phaser, not the browser */
     }
 
     #game-hint {
@@ -52,15 +63,135 @@
       letter-spacing: 2px;
       user-select: none;
     }
+
+    /* ── Mobile overrides ─────────────────────────────────────────────── */
+    @media (max-width: 767px) {
+      body {
+        /* portrait: don't clip vertically — let the battle bar show below canvas */
+        overflow-y: auto;
+        justify-content: flex-start;
+        padding-top: 8px;
+      }
+
+      #game-title  { font-size: 11px; letter-spacing: 4px; margin-bottom: 5px; }
+      #game-hint   { font-size: 8px;  margin-top: 6px; letter-spacing: 1px; }
+
+      #canvas-wrapper {
+        width: 100vw;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    /* ── Landscape hint (portrait-only overlay) ──────────────────────── */
+    #landscape-hint {
+      display: none;   /* shown via JS when portrait + BattleScene active */
+      width: 100%;
+      background: #11111e;
+      color: #5577aa;
+      font-size: 11px;
+      text-align: center;
+      padding: 7px 14px;
+      border-bottom: 1px solid #1e2a40;
+      user-select: none;
+    }
+
+    #landscape-hint button {
+      margin-left: 10px;
+      background: none;
+      border: 1px solid #2a3a55;
+      color: #445566;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    /* ── Mobile battle bar ───────────────────────────────────────────── */
+    /* Appears BELOW the canvas as a flex sibling – no canvas overlap.    */
+    #mobile-battle-bar {
+      display: none;   /* shown via JS when mobile + BattleScene active */
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 880px;
+      padding: 10px 12px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      background: #09091a;
+      border-top: 1px solid #1e1e3a;
+    }
+
+    .mb-btn {
+      flex: 1;
+      max-width: 90px;
+      min-height: 46px;
+      background: #0e1426;
+      color: #7799bb;
+      border: 1px solid #2a3a55;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, color 0.12s;
+      line-height: 1.3;
+      padding: 6px 4px;
+    }
+
+    .mb-btn:active { background: #1a2a44; color: #aaccee; }
+
+    .mb-btn:disabled {
+      color: #2a3444;
+      border-color: #181e28;
+      cursor: default;
+    }
+
+    .mb-btn.primary {
+      background: #1a3a66;
+      color: #aad4ff;
+      border-color: #2a5088;
+    }
+    .mb-btn.primary:active  { background: #245599; }
+    .mb-btn.primary:disabled { background: #0e1a28; color: #2a3a50; border-color: #1a2030; }
+
+    .mb-btn.danger {
+      background: #2a1010;
+      color: #774444;
+      border-color: #3a1818;
+    }
+    .mb-btn.danger:active { background: #3a1818; color: #cc4444; }
   </style>
 </head>
 <body>
+
+  <!-- Landscape nudge — shows only in portrait while BattleScene is active -->
+  <div id="landscape-hint">
+    📱 横屏效果更佳
+    <button onclick="document.getElementById('landscape-hint').style.display='none'">知道了</button>
+  </div>
 
   <div id="game-title">空  裂  ·  KONG LIE</div>
 
   <div id="canvas-wrapper"></div>
 
   <div id="game-hint">开战前可拖拽调整阵型 · 满蓝自动释放 W · 点击 R 手动大招 · 30秒后进入加时</div>
+
+  <!-- Mobile battle controls — hidden on desktop, shown below canvas on mobile -->
+  <div id="mobile-battle-bar">
+    <button class="mb-btn danger"   id="mb-abort"
+      onclick="MobileUtil._mobileAbort()">中止</button>
+    <button class="mb-btn primary"  id="mb-start"
+      onclick="MobileUtil._mobileStart()">▶ 开战</button>
+    <button class="mb-btn"          id="mb-w"
+      onclick="MobileUtil._mobileW()" disabled>W 技</button>
+    <button class="mb-btn"          id="mb-r"
+      onclick="MobileUtil._mobileR()" disabled>R 技</button>
+    <button class="mb-btn"          id="mb-pause"
+      onclick="MobileUtil._mobilePause()" disabled>⏸ 暂停</button>
+  </div>
 
   <!-- Ensure Phaser's rAF loop runs even when the tab is reported as hidden
        or unfocused (e.g. inside certain browser-extension environments) -->
@@ -84,29 +215,30 @@
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
   <!-- Game scripts — order matters (no module system) -->
-  <!-- ?v=2 busts browser cache after the input-fix refactor -->
+  <!-- ?v=3 busts browser cache after the mobile-ui refactor -->
+  <!-- Utilities first — other scripts depend on MobileUtil -->
+  <script src="src/utils/MobileUtil.js?v=3"></script>
+  <script src="src/utils/autoPlacement.js?v=3"></script>
   <!-- State & data -->
-  <script src="src/systems/CampaignState.js?v=2"></script>
-  <script src="src/data/pieceData.js?v=2"></script>
-  <script src="src/data/campaignData.js?v=2"></script>
-  <script src="src/data/synergyData.js?v=2"></script>
-  <!-- Utilities -->
-  <script src="src/utils/autoPlacement.js?v=2"></script>
+  <script src="src/systems/CampaignState.js?v=3"></script>
+  <script src="src/data/pieceData.js?v=3"></script>
+  <script src="src/data/campaignData.js?v=3"></script>
+  <script src="src/data/synergyData.js?v=3"></script>
   <!-- Entities -->
-  <script src="src/entities/Piece.js?v=2"></script>
-  <script src="src/entities/Hero.js?v=2"></script>
+  <script src="src/entities/Piece.js?v=3"></script>
+  <script src="src/entities/Hero.js?v=3"></script>
   <!-- Systems -->
-  <script src="src/systems/BattleSystem.js?v=2"></script>
+  <script src="src/systems/BattleSystem.js?v=3"></script>
   <!-- Scenes — navigation order: World → City → Campaign -->
-  <script src="src/scenes/WorldMapScene.js?v=2"></script>
-  <script src="src/scenes/CityScene.js?v=2"></script>
-  <script src="src/scenes/CampaignStartScene.js?v=2"></script>
-  <script src="src/scenes/CampaignMapScene.js?v=2"></script>
-  <script src="src/scenes/BetweenBattleScene.js?v=2"></script>
-  <script src="src/scenes/CampaignEndScene.js?v=2"></script>
-  <script src="src/scenes/BattleScene.js?v=2"></script>
-  <script src="src/scenes/ResultScene.js?v=2"></script>
-  <script src="src/main.js?v=2"></script>
+  <script src="src/scenes/WorldMapScene.js?v=3"></script>
+  <script src="src/scenes/CityScene.js?v=3"></script>
+  <script src="src/scenes/CampaignStartScene.js?v=3"></script>
+  <script src="src/scenes/CampaignMapScene.js?v=3"></script>
+  <script src="src/scenes/BetweenBattleScene.js?v=3"></script>
+  <script src="src/scenes/CampaignEndScene.js?v=3"></script>
+  <script src="src/scenes/BattleScene.js?v=3"></script>
+  <script src="src/scenes/ResultScene.js?v=3"></script>
+  <script src="src/main.js?v=3"></script>
 
 </body>
 </html>

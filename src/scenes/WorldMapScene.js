@@ -55,6 +55,10 @@ class WorldMapScene extends Phaser.Scene {
       fontSize: '9px', color: '#1a2233'
     }).setOrigin(1,1);
 
+    // ── Mobile: camera zoom + drag-to-pan ─────────────────────────
+    // Focus on 位面城 (390, 310) so the only unlocked node is centred.
+    MobileUtil.enableCameraDrag(this, { centerX: 390, centerY: 340 });
+
     this.cameras.main.fadeIn(400, 0, 0, 0);
   }
 
@@ -103,7 +107,8 @@ class WorldMapScene extends Phaser.Scene {
         circle.setStrokeStyle(2, 0x2e5c99);
         circle.setFillStyle(0x0c1e36);
       });
-      circle.on('pointerdown', () => {
+      // Use MobileUtil.onTap so a drag gesture doesn't accidentally trigger navigation
+      MobileUtil.onTap(this, circle, () => {
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
           this.scene.start('CityScene');

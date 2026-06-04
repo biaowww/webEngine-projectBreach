@@ -69,12 +69,15 @@ class CityScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setInteractive({ cursor: 'pointer' });
     back.on('pointerover', () => back.setStyle({ color: '#5577aa' }));
     back.on('pointerout',  () => back.setStyle({ color: '#2a3e5a' }));
-    back.on('pointerdown', () => {
+    MobileUtil.onTap(this, back, () => {
       this.cameras.main.fadeOut(280, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('WorldMapScene');
       });
     });
+
+    // Mobile: zoom + drag-to-pan; centre on the two entry cards
+    MobileUtil.enableCameraDrag(this, { centerX: 440, centerY: 310 });
 
     this.cameras.main.fadeIn(350, 0, 0, 0);
   }
@@ -140,12 +143,12 @@ class CityScene extends Phaser.Scene {
       }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
       btn.on('pointerover', () => btn.setStyle({ color: '#66aaee' }));
       btn.on('pointerout',  () => btn.setStyle({ color: '#3a6699' }));
-      btn.on('pointerdown', action);
+      MobileUtil.onTap(this, btn, action);
 
       card.setInteractive({ cursor: 'pointer' });
       card.on('pointerover', () => card.setStrokeStyle(2, 0x5588dd));
       card.on('pointerout',  () => card.setStrokeStyle(2, 0x2e5599));
-      card.on('pointerdown', action);
+      MobileUtil.onTap(this, card, action);
     }
   }
 

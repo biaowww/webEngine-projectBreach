@@ -38,6 +38,9 @@ class BetweenBattleScene extends Phaser.Scene {
 
     // ── Proceed button ────────────────────────────────────────────
     this._buildProceedBtn(CX, contentY, isHeroSelect);
+
+    // Mobile: zoom + drag-to-pan so reward cards and proceed button are reachable
+    MobileUtil.enableCameraDrag(this, { centerX: 440, centerY: 350 });
   }
 
   // ── Top bar ──────────────────────────────────────────────────────

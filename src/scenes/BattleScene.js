@@ -42,6 +42,12 @@ class BattleScene extends Phaser.Scene {
     this._buildBench();
     this._buildDragHighlight();
     this._enableDragDrop();
+
+    // ── Mobile battle bar + orientation hint ──────────────────────
+    MobileUtil.showBattleBar();
+    // Hide bar when this scene shuts down (navigates away)
+    this.events.once('shutdown', () => MobileUtil.hideBattleBar());
+    this.events.once('destroy',  () => MobileUtil.hideBattleBar());
   }
 
   update(time, delta) {

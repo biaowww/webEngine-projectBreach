@@ -48,6 +48,10 @@ class CampaignMapScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
+    // Mobile: zoom + drag-to-pan; centre on the active battle node
+    const activeX = 160 + CampaignState.currentBattle * 168;
+    MobileUtil.enableCameraDrag(this, { centerX: Math.min(activeX + 80, 700), centerY: 320 });
+
     this.cameras.main.fadeIn(350, 0, 0, 0);
   }
 
@@ -145,13 +149,13 @@ class CampaignMapScene extends Phaser.Scene {
         circle.setStrokeStyle(2, 0xffd700);
         circle.setFillStyle(0x1a1800);
       });
-      circle.on('pointerdown', () => this._enterBattle(index));
+      MobileUtil.onTap(this, circle, () => this._enterBattle(index));
 
       // "→ 进入" nudge
-      this.add.text(x, y + r + 40, '▶  进入战斗', {
+      const nudge = this.add.text(x, y + r + 40, '▶  进入战斗', {
         fontSize: '9px', color: '#4a6a22'
-      }).setOrigin(0.5).setInteractive({ cursor: 'pointer' })
-        .on('pointerdown', () => this._enterBattle(index));
+      }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+      MobileUtil.onTap(this, nudge, () => this._enterBattle(index));
     }
   }
 
@@ -238,7 +242,7 @@ class CampaignMapScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
     btn.on('pointerover', () => btn.setStyle({ color: '#cc4444', backgroundColor: '#1a0a0a' }));
     btn.on('pointerout',  () => btn.setStyle({ color: '#553333', backgroundColor: '#100808' }));
-    btn.on('pointerdown', () => this._abortCampaign());
+    MobileUtil.onTap(this, btn, () => this._abortCampaign());
   }
 
   _abortCampaign() {

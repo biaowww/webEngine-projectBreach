@@ -135,6 +135,9 @@ class ResultScene extends Phaser.Scene {
 
     if (win)       this._burst(CX, CY);
     else if (draw) this._drawFlash(CX, CY);
+
+    // Mobile: zoom + drag-to-pan
+    MobileUtil.enableCameraDrag(this, { centerX: 440, centerY: 345 });
   }
 
   _btn(x, y, label, cb) {

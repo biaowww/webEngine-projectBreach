@@ -19,7 +19,10 @@ const game = window.game = new Phaser.Game({
   ],
   scale: {
     mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    // Allow Phaser to read the responsive wrapper size rather than
+    // assuming the wrapper is always exactly 880×690.
+    expandParent: false
   },
   render: {
     antialias: true,
