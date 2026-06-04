@@ -199,6 +199,91 @@
       color: #1a2030;
     }
     #mobile-hero-sel .mhs-card.unlocked .mhs-badge { color: #44aa55; }
+
+    /* ── Mobile campaign sidebar (fixed right, CampaignMapScene only) ─── */
+    #mobile-campaign-sidebar {
+      display: none;   /* JS shows this */
+      position: fixed;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 160;
+      width: 128px;
+      background: rgba(7, 11, 20, 0.92);
+      border: 1px solid #1a2438;
+      border-radius: 6px;
+      padding: 8px 7px;
+      font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+      color: #7799bb;
+      font-size: 11px;
+      pointer-events: none;
+      max-height: 80vh;
+      overflow: hidden;
+    }
+    #mobile-campaign-sidebar .mcs-section-title {
+      font-size: 9px;
+      color: #445577;
+      letter-spacing: 1px;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    #mobile-campaign-sidebar .mcs-lives {
+      font-size: 18px;
+      color: #cc4455;
+      text-align: center;
+      line-height: 1;
+    }
+    #mobile-campaign-sidebar .mcs-lives-label {
+      font-size: 7px;
+      color: #553344;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    #mobile-campaign-sidebar .mcs-divider {
+      border: none;
+      border-top: 1px solid #1a2438;
+      margin: 5px 0;
+    }
+    #mobile-campaign-sidebar .mcs-relic-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 3px;
+    }
+    #mobile-campaign-sidebar .mcs-relic-icon {
+      width: 22px; height: 22px;
+      border-radius: 3px;
+      border: 1px solid #998844;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    #mobile-campaign-sidebar .mcs-relic-name {
+      font-size: 10px;
+      color: #ccaa55;
+      font-weight: bold;
+      word-break: break-all;
+    }
+    #mobile-campaign-sidebar .mcs-relic-buff {
+      font-size: 7px;
+      color: #667788;
+      line-height: 1.4;
+      margin-bottom: 2px;
+    }
+    #mobile-campaign-sidebar .mcs-syn-row {
+      font-size: 8px;
+      color: #2a3040;
+      margin-bottom: 1px;
+    }
+    #mobile-campaign-sidebar .mcs-syn-row.active { color: #aabbcc; }
+    #mobile-campaign-sidebar .mcs-syn-bonus {
+      font-size: 7px;
+      color: #33484a;
+      margin-bottom: 3px;
+      padding-left: 4px;
+    }
   </style>
 </head>
 <body>
@@ -224,6 +309,10 @@
     <button class="mb-btn"         id="mb-pause"
       onclick="MobileUtil._mobilePause()" disabled>⏸ 暂停</button>
   </div>
+
+  <!-- Mobile campaign sidebar — fixed right, only during CampaignMapScene -->
+  <!-- Content is injected dynamically by MobileUtil.showCampaignSidebar() -->
+  <div id="mobile-campaign-sidebar"></div>
 
   <!-- Mobile hero selector — fixed bottom-left, only during WorldMapScene -->
   <div id="mobile-hero-sel">

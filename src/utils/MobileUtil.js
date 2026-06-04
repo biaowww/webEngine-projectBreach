@@ -188,6 +188,78 @@ const MobileUtil = {
     }
   },
 
+  // ── Campaign sidebar overlay (CampaignMapScene) ───────────────────────
+
+  /**
+   * Build and show the fixed HTML campaign sidebar (lives / relic / synergies).
+   * Only shown on mobile — desktop uses the in-Phaser sidebar.
+   */
+  showCampaignSidebar() {
+    if (!this.isMobile()) return;
+    const el = document.getElementById('mobile-campaign-sidebar');
+    if (!el) return;
+
+    // ── Build inner HTML from live game state ──────────────────────
+    const lives     = CampaignState.lives;
+    const maxLives  = 2;
+    const relic     = CampaignState.currentRelic;
+
+    const allIds    = [CampaignState.mainHero];
+    if (CampaignState.subHero) allIds.push(CampaignState.subHero);
+    allIds.push(...CampaignState.roster);
+    const synCounts = calcSynergies(allIds);
+
+    let html = '';
+
+    // Lives
+    html += `<div class="mcs-lives">${'♥'.repeat(lives)}${'♡'.repeat(Math.max(0, maxLives - lives))}</div>`;
+    html += `<div class="mcs-lives-label">生 命</div>`;
+    html += `<hr class="mcs-divider">`;
+
+    // Relic
+    if (relic) {
+      const rc = '#' + (relic.color || 0x334455).toString(16).padStart(6, '0');
+      html += `<div class="mcs-section-title">圣 物</div>`;
+      html += `<div class="mcs-relic-row">
+                 <div class="mcs-relic-icon" style="background:${rc}">
+                   ${relic.icon || '★'}
+                 </div>
+                 <div class="mcs-relic-name">${relic.name}</div>
+               </div>`;
+      (relic.buffs || []).forEach(b => {
+        html += `<div class="mcs-relic-buff">${b}</div>`;
+      });
+      html += `<hr class="mcs-divider">`;
+    }
+
+    // Synergies
+    html += `<div class="mcs-section-title">当前羁绊</div>`;
+    let hadSyn = false;
+    Object.entries(synCounts).sort((a, b) => b[1] - a[1]).forEach(([syn, cnt]) => {
+      const thresh = getActiveThreshold(syn, cnt);
+      const def    = SYNERGY_DATA[syn];
+      const color  = thresh ? ('#' + (def?.color || 0x6677aa).toString(16).padStart(6, '0')) : '';
+      const label  = thresh ? `${syn} ×${cnt} ✓` : `${syn} ×${cnt}`;
+      html += `<div class="mcs-syn-row${thresh ? ' active' : ''}"
+                    style="${color ? `color:${color}` : ''}">${label}</div>`;
+      if (thresh) {
+        html += `<div class="mcs-syn-bonus">${thresh.bonus}</div>`;
+      }
+      hadSyn = true;
+    });
+    if (!hadSyn) {
+      html += `<div class="mcs-syn-row">暂无激活羁绊</div>`;
+    }
+
+    el.innerHTML = html;
+    el.style.display = 'block';
+  },
+
+  hideCampaignSidebar() {
+    const el = document.getElementById('mobile-campaign-sidebar');
+    if (el) el.style.display = 'none';
+  },
+
   // ── Hero selector overlay (WorldMapScene) ─────────────────────────────
 
   /** Show the fixed HTML hero selector overlay at screen bottom-left. */

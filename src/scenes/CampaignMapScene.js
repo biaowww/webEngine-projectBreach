@@ -34,8 +34,16 @@ class CampaignMapScene extends Phaser.Scene {
     // ── Node map ─────────────────────────────────────────────────────
     this._buildNodeMap();
 
-    // ── Right sidebar ────────────────────────────────────────────────
-    this._buildSidebar();
+    // ── Right sidebar ─────────────────────────────────────────────────
+    // On mobile: replace Phaser sidebar with a fixed HTML overlay so it
+    // stays pinned to the screen right edge even when the node map is panned.
+    if (MobileUtil.isMobile()) {
+      MobileUtil.showCampaignSidebar();
+      this.events.once('shutdown', () => MobileUtil.hideCampaignSidebar());
+      this.events.once('destroy',  () => MobileUtil.hideCampaignSidebar());
+    } else {
+      this._buildSidebar();
+    }
 
     // ── Abort button ─────────────────────────────────────────────────
     this._buildAbortBtn();
@@ -48,9 +56,9 @@ class CampaignMapScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
-    // Mobile: zoom + drag-to-pan; centre on the active battle node
+    // Mobile: zoom + drag-to-pan + pinch-to-zoom; centre on active battle node
     const activeX = 160 + CampaignState.currentBattle * 168;
-    MobileUtil.enableCameraDrag(this, { centerX: Math.min(activeX + 80, 700), centerY: 320 });
+    MobileUtil.enableCameraDrag(this, { centerX: Math.min(activeX + 80, 660), centerY: 320 });
 
     this.cameras.main.fadeIn(350, 0, 0, 0);
   }
